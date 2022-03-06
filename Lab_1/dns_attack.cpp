@@ -129,7 +129,9 @@ int main(int argc, char const *argv[])
     // dns = (struct DNS_HEADER *)(datagram + sizeof(struct iphdr) + sizeof(struct udphdr));
     unsigned char DNS_query[] = {0xd8, 0xcb, 0x01, 0x00,
                                  0x00, 0x01, 0x00, 0x00,
-                                 0x00, 0x00, 0x00, 0x00};
+                                 0x00, 0x00, 0x00, 0x01};
+    char query_name[] = "google-public-dns-a.google.com";
+    strncat((char *)DNS_query, query_name, strlen(query_name));
     memcpy(data, DNS_query, sizeof(DNS_query));
 
     sin.sin_family = AF_INET;
