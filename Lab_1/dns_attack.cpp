@@ -11,7 +11,7 @@
 #include <errno.h>       //For errno - the error number
 #include <netinet/udp.h> //Provides declarations for udp header
 #include <netinet/ip.h>  //Provides declarations for ip header
-
+#include <arpa/inet.h>
 /* 
 	96 bit (12 bytes) pseudo header needed for udp header checksum calculation 
 */
@@ -166,7 +166,7 @@ int main(int argc, char const *argv[])
     psh.udp_length = htons(sizeof(struct udphdr) + sizeof(DNS_query));
 
     int psize = sizeof(struct pseudo_header) + sizeof(struct udphdr) + sizeof(DNS_query);
-    pseudogram = malloc(psize);
+    pseudogram = (char *)malloc(psize);
 
     memcpy(pseudogram, (char *)&psh, sizeof(struct pseudo_header));
     memcpy(pseudogram + sizeof(struct pseudo_header), udph, sizeof(struct udphdr) + sizeof(DNS_query));
