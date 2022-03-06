@@ -169,7 +169,7 @@ int main(int argc, char const *argv[])
     pseudogram = malloc(psize);
 
     memcpy(pseudogram, (char *)&psh, sizeof(struct pseudo_header));
-    memcpy(pseudogram + sizeof(struct pseudo_header), udph, sizeof(struct udphdr) + sizeof(DNS_query);
+    memcpy(pseudogram + sizeof(struct pseudo_header), udph, sizeof(struct udphdr) + sizeof(DNS_query));
 
     udph->check = csum((unsigned short *)pseudogram, psize);
 
