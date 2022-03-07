@@ -127,13 +127,17 @@ int main(int argc, char const *argv[])
     // strcpy(data, "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
     // write DNS query here...
     // dns = (struct DNS_HEADER *)(datagram + sizeof(struct iphdr) + sizeof(struct udphdr));
-    unsigned char DNS_query[50] = {0xd8, 0xcb, 0x01, 0x00,
-                                   0x00, 0x01, 0x00, 0x00,
-                                   0x00, 0x00, 0x00, 0x01, 0x05};
-    char query_name[] = "https://www.apple.com/tw/";
-    unsigned char DNS_query_msg[] = {0x00, 0x01, 0x00, 0x01};
-    memcpy(DNS_query + 13, query_name, sizeof(query_name));
-    memcpy(DNS_query + 13 + sizeof(query_name), DNS_query_msg, sizeof(DNS_query_msg));
+    unsigned char DNS_query[] = {0xd8, 0xcb, 0x01, 0x00,
+                                 0x00, 0x01, 0x00, 0x00,
+                                 0x00, 0x00, 0x00, 0x00,
+                                 0x03, 0x77, 0x77, 0x77,
+                                 0x05, 0x61, 0x70, 0x70, 0x6c, 0x65,
+                                 0x03, 0x63, 0x6f, 0x6d, 0x00,
+                                 0x00, 0x01, 0x00, 0x01};
+    // char query_name[] = "www.apple.com";
+    // unsigned char DNS_query_msg[] = {0x00, 0x01, 0x00, 0x01};
+    // memcpy(DNS_query + 13, query_name, sizeof(query_name));
+    // memcpy(DNS_query + 13 + sizeof(query_name), DNS_query_msg, sizeof(DNS_query_msg));
 
     memcpy(data, DNS_query, sizeof(DNS_query));
 
