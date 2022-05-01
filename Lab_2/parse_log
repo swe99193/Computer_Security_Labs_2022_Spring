@@ -1,0 +1,7 @@
+#!/bin/bash
+line="$(grep -a '&username' tmp.log)"
+echo -n "Username:  "
+echo $line | sed 's/.*&username=\(.\+\)&password.*/\1/'
+echo -n "Password:  "
+echo $line | sed 's/.*&password=\(.\+\)&.*/\1/'
+

